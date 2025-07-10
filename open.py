@@ -4,7 +4,7 @@ from io import StringIO
 import os
 
 # 這裡要加入您的 OpenAI API 密鑰
-openai.api_key = os.getenv("OPENAI_API_KEY")
+openai.api_key = os.getenv("GOOGLE_API_KEY")
 
 # 初始設置
 if 'history' not in st.session_state:
