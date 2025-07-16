@@ -17,6 +17,9 @@ model = genai.GenerativeModel("models/gemini-2.0-flash")
 # ====== 頁面設定 ======
 st.set_page_config(page_title="Gemini Chat App", page_icon="🤖")
 
+# ===== 側邊欄選單 =====
+app_mode = st.sidebar.selectbox("選擇功能模式", ["🤖 Gemini 聊天機器人"])
+
 # ====== 聊天紀錄狀態 ======
 if "history" not in st.session_state:
     st.session_state.history = []
