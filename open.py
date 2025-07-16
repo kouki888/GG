@@ -41,9 +41,12 @@ if app_mode == "🤖 Gemini 聊天機器人":
     model_option = st.selectbox("⚙️ 模型版本", ["models/gemini-2.0-flash", "models/gemini-1.5-pro"])
 
     # ====== 使用者輸入問題 ======
-    user_input = st.text_area("✏️ 你想問 Gemini 什麼？", height=100)
+    # ===== 表單：輸入框 + 按 Enter 送出 =====
+    with st.form("question_form", clear_on_submit=True):
+        user_input = st.text_input("✏️ 你想問 Gemini 什麼？", placeholder="請輸入問題並按 Enter...", key="user_input")
+        submitted = st.form_submit_button("🚀 送出")  # 使用者可以按 Enter 或按按鈕送出
 
-    if st.button("🚀 送出"):
+    if submitted:
         if user_input.strip() == "":
             st.warning("請輸入問題後再送出。")
         elif len(user_input) > 1000:
