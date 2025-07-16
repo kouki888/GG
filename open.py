@@ -12,7 +12,7 @@ if not API_KEY:
     st.stop()
 
 genai.configure(api_key=API_KEY)
-model = genai.GenerativeModel("models/gemini-2.0-pro")
+model = genai.GenerativeModel("models/gemini-2.0-flash")
 
 # ====== 頁面設定 ======
 st.set_page_config(page_title="Gemini Chat App", page_icon="🤖")
