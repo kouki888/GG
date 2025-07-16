@@ -1,21 +1,36 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
-  <title>模擬對話平台</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <title>Chat UI</title>
+  <style>
+    body { margin: 0; font-family: 'Noto Sans', sans-serif; }
+    .layout { display: flex; height: 100vh; }
+    .sidebar {
+      width: 220px; background: #f4f4f4; padding: 20px; border-right: 1px solid #ddd; overflow-y: auto;
+    }
+    .sidebar h2 { font-size: 18px; }
+    .sidebar ul { list-style: none; padding: 0; }
+    .sidebar li { margin: 8px 0; padding: 8px; background: #fff; border: 1px solid #ccc; border-radius: 6px; cursor: pointer; }
+    .main { flex: 1; display: flex; flex-direction: column; }
+    .chat-window { flex: 1; padding: 20px; overflow-y: auto; background: #fff; }
+    .message { margin-bottom: 10px; }
+    .user { text-align: right; color: #2c3e50; }
+    .bot { text-align: left; color: #2980b9; }
+    .input-bar { display: flex; padding: 10px; border-top: 1px solid #ddd; background: #fafafa; }
+    .input-bar input { flex: 1; padding: 10px; }
+    .input-bar button { margin-left: 10px; padding: 10px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; }
+  </style>
 </head>
 <body>
   <div class="layout">
-    <!-- 側邊欄 -->
     <aside class="sidebar">
       <h2>對話紀錄</h2>
       <ul id="historyList"></ul>
     </aside>
 
-    <!-- 主畫面 -->
     <main class="main">
-      <div id="chatWindow" class="chat-window"></div>
+      <div class="chat-window" id="chatWindow"></div>
       <div class="input-bar">
         <input type="text" id="userInput" placeholder="輸入訊息..." />
         <button onclick="sendMessage()">送出</button>
@@ -23,6 +38,34 @@
     </main>
   </div>
 
-  <script src="app.js"></script>
+  <script>
+    let chatWindow = document.getElementById("chatWindow");
+    let historyList = document.getElementById("historyList");
+    let chatHistory = [];
+
+    function appendMessage(role, text) {
+      const msg = document.createElement("div");
+      msg.className = "message " + role;
+      msg.textContent = text;
+      chatWindow.appendChild(msg);
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    function sendMessage() {
+      const input = document.getElementById("userInput");
+      const text = input.value.trim();
+      if (!text) return;
+
+      appendMessage("user", text);
+      chatHistory.push({ role: "user", text });
+
+      setTimeout(() => {
+        const reply = "這是模擬回覆：" + text;
+        appendMessage("bot", reply);
+        chatHistory.push({ role: "bot", text: reply });
+        input.value = "";
+      }, 500);
+    }
+  </script>
 </body>
 </html>
