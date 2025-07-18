@@ -41,9 +41,9 @@ if submitted and user_input:
             answer = response.text.strip()
 
             # 自動產生主題（限制 10 字內）
-                    title_prompt = f"請用不超過10個中文字為以下內容取一個簡短主題：\n{user_input}"
-                    title_resp = model.generate_content(title_prompt)
-                    title = title_resp.text.strip().split("\n")[0]
+            title_prompt = f"請用不超過10個中文字為以下內容取一個簡短主題：\n{user_input}"
+            title_resp = model.generate_content(title_prompt)
+            title = title_resp.text.strip().split("\n")[0]
 
             # 儲存對話紀錄
             st.session_state.history.append({
