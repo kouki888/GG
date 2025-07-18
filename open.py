@@ -23,17 +23,6 @@ if "conversations" not in st.session_state:
 if "selected_index" not in st.session_state:
     st.session_state.selected_index = None
 
-# ===== 側邊欄功能 =====
-with st.sidebar:
-    st.header("🗂️ 對話主題")
-    for idx, conv in enumerate(st.session_state.conversations):
-        if st.button(conv["title"], key=f"title_{idx}"):
-            st.session_state.selected_index = idx
-
-    if st.button("🧹 清除所有對話"):
-        st.session_state.conversations = []
-        st.session_state.selected_index = None
-
 # ===== 主畫面區塊 =====
 st.title("🤖 Gemini Chatbot")
 st.markdown("請輸入任何問題，並按 Enter 或點擊送出，Gemini 將會回應你。")
@@ -66,7 +55,18 @@ if submitted and user_input:
 
         except Exception as e:
             st.error(f"❌ 發生錯誤：{e}")
+            
+# ===== 側邊欄功能 =====
+with st.sidebar:
+    st.header("🗂️ 對話主題")
+    for idx, conv in enumerate(st.session_state.conversations):
+        if st.button(conv["title"], key=f"title_{idx}"):
+            st.session_state.selected_index = idx
 
+    if st.button("🧹 清除所有對話"):
+        st.session_state.conversations = []
+        st.session_state.selected_index = None
+        
 # ====== 顯示選定對話內容 ======
 if st.session_state.selected_index is not None:
     conv = st.session_state.conversations[st.session_state.selected_index]
