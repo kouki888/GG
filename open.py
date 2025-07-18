@@ -43,11 +43,6 @@ if submitted and user_input:
             response = model.generate_content(user_input)
             answer = response.text.strip()
 
-            # 產生主題
-            title_prompt = f"請用不超過10個中文字為以下內容取一個主題：\n{user_input}"
-            title_resp = model.generate_content(title_prompt)
-            title = title_resp.text.strip().split("\n")[0][:10]
-
             # 儲存聊天記錄
             st.session_state.chat_history.append({
                 "title": title,
