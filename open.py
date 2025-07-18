@@ -18,59 +18,81 @@ model = genai.GenerativeModel("models/gemini-2.0-flash")
 st.set_page_config(page_title="Gemini Chat App", page_icon="🤖")
 
 # ====== 初始化狀態 ======
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
-if "selected_chat" not in st.session_state:
-    st.session_state.selected_chat = None
+if "chat_sessions" not in st.session_state:
+    st.session_state.chat_sessions = {}  # {"主題名稱": [{"user": ..., "bot": ...}, ...]}
+if "current_topic" not in st.session_state:
+    st.session_state.current_topic = None
+if "chat" not in st.session_state:
+    st.session_state.chat = model.start_chat(history=[])
 
-# ===== 側邊欄選單 =====
-app_mode = st.sidebar.selectbox("選擇功能模式", ["🤖 Gemini 聊天機器人"])
+# ====== 自動生成主題函式 ======
+def generate_topic(prompt):
+    topic_model = genai.GenerativeModel("models/gemini-1.5-flash")  # 可改回你常用的
+    topic_chat = topic_model.start_chat()
+    response = topic_chat.send_message(f"請為以下提問產生一個簡短明確的主題，不超過8個字：\n「{prompt}」")
+    return response.text.strip().replace("\n", "")
 
-# ===== 主標題區塊 =====
-st.title("🤖 Gemini Chatbot")
-st.markdown("請輸入任何問題，並按 Enter 或點擊送出，Gemini 將會回應你。")
+# ===== 側邊欄功能 =====
+st.sidebar.title("📂 對話主題")
 
-# ===== 輸入區塊 =====
+if st.session_state.chat_sessions:
+    selected_topic = st.sidebar.radio(
+        "選擇主題",
+        list(st.session_state.chat_sessions.keys()),
+        index=list(st.session_state.chat_sessions.keys()).index(st.session_state.current_topic)
+        if st.session_state.current_topic in st.session_state.chat_sessions else 0
+    )
+    st.session_state.current_topic = selected_topic
+else:
+    st.sidebar.info("尚未有主題紀錄")
+
+if st.sidebar.button("🧹 清除所有主題"):
+    st.session_state.chat_sessions.clear()
+    st.session_state.current_topic = None
+    st.session_state.chat = model.start_chat(history=[])
+
+# ====== 主頁區塊 ======
+st.title("🤖 Gemini 聊天機器人")
+st.markdown("請輸入任何問題，Gemini 將會回應你。")
+
+# ====== 輸入欄位 ======
 with st.form("user_input_form", clear_on_submit=True):
     user_input = st.text_input("你想問什麼？", placeholder="請輸入問題...", key="chat_input")
     submitted = st.form_submit_button("🚀 送出")
 
-# ===== 呼叫 Gemini 回應 =====
+# ====== 處理使用者輸入 ======
 if submitted and user_input:
     with st.spinner("Gemini 正在思考中..."):
         try:
-            # 生成回答
-            response = model.generate_content(user_input)
+            response = st.session_state.chat.send_message(user_input)
             answer = response.text.strip()
 
-            # 儲存聊天記錄
-            st.session_state.chat_history.append({
-                "title": title,
+            # 如果是第一次對話，生成主題
+            if st.session_state.current_topic is None:
+                topic = generate_topic(user_input)
+                # 確保主題不重複
+                counter = 1
+                original_topic = topic
+                while topic in st.session_state.chat_sessions:
+                    topic = f"{original_topic}_{counter}"
+                    counter += 1
+
+                st.session_state.current_topic = topic
+                st.session_state.chat_sessions[topic] = []
+
+            # 儲存對話內容
+            st.session_state.chat_sessions[st.session_state.current_topic].append({
                 "user": user_input,
                 "bot": answer
             })
-            st.session_state.selected_chat = len(st.session_state.chat_history) - 1
 
         except Exception as e:
             st.error(f"❌ 發生錯誤：{e}")
 
-# ===== 側邊欄：顯示聊天主題列表 =====
-with st.sidebar:
-    st.markdown("---")
-    st.header("🗂️ 聊天紀錄")
-
-    for idx, chat in enumerate(st.session_state.chat_history):
-        if st.button(chat["title"], key=f"chat_{idx}"):
-            st.session_state.selected_chat = idx
-
-    if st.button("🧹 清除所有聊天紀錄"):
-        st.session_state.chat_history = []
-        st.session_state.selected_chat = None
-
-# ===== 顯示選定對話紀錄 =====
-if st.session_state.selected_chat is not None:
-    chat = st.session_state.chat_history[st.session_state.selected_chat]
-    st.markdown("### 💬 對話紀錄")
-    st.markdown(f"**📝 主題：** {chat['title']}")
-    st.markdown(f"**👤 你：** {chat['user']}")
-    st.markdown(f"**🤖 Gemini：** {chat['bot']}")
+# ====== 顯示聊天紀錄 ======
+if st.session_state.current_topic:
+    st.markdown(f"### 💬 主題：{st.session_state.current_topic}")
+    for item in st.session_state.chat_sessions[st.session_state.current_topic]:
+        st.markdown(f"**👤 你：** {item['user']}")
+        st.markdown(f"**🤖 Gemini：** {item['bot']}")
+        st.markdown("---")
