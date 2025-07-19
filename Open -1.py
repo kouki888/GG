@@ -3,88 +3,123 @@ from dotenv import load_dotenv
 import os
 import google.generativeai as genai
 
-# 頁面設定
+# ============================================
+# 頁面基本設定
+# ============================================
 st.set_page_config(page_title="Gemini 聊天室", layout="wide")
 st.title("🤖 Gemini AI 聊天室")
 
-# ====== 頁面設定 ======
-st.set_page_config(page_title="Gemini Chat App", page_icon="🤖")
+# ============================================
+# Session State 初始化
+# ============================================
+_default_state = {
+    "api_key": "",
+    "remember_api": False,
+    "conversations": {},  # {topic_id: {"title": str, "history": list[dict]}}
+    "topic_ids": [],      # 保持主題的順序
+    "current_topic": "new",  # 預設為新對話
+}
+for k, v in _default_state.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
 
-# 初始化狀態
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
-if "api_key" not in st.session_state:
-    st.session_state.api_key = ""
-if "remember_api" not in st.session_state:
-    st.session_state.remember_api = False
-if "chat" not in st.session_state:
-    st.session_state.chat = None  # Gemini 的 chat 物件
-
-# ---------------- 🔐 API 金鑰輸入區 ----------------
+# ============================================
+# Sidebar ── API Key 區塊
+# ============================================
 with st.sidebar:
-    app_mode = st.sidebar.selectbox("選擇功能模式", ["🤖 Gemini 聊天機器人"])
-    st.markdown("## 🔐 API 設定")
-    
-    remember_api_checkbox = st.checkbox("記住 API 金鑰", value=st.session_state.remember_api)
+    st.markdown("## 🔐 API 設定 ")
 
-    # 檢查是否從勾選變為取消，若是則清空 API 金鑰
-    if not remember_api_checkbox and st.session_state.remember_api:
-        st.session_state.api_key = ""
+    # 記住 API Key 的勾選框
+    st.session_state.remember_api = st.checkbox(
+        "記住 API 金鑰", value=st.session_state.remember_api
+    )
 
-    # 更新勾選狀態
-    st.session_state.remember_api = remember_api_checkbox
-
-    # 根據勾選狀態與 API 金鑰顯示或輸入
+    # API Key 輸入或顯示
     if st.session_state.remember_api and st.session_state.api_key:
         api_key_input = st.session_state.api_key
+        st.success("✅ 已使用儲存的 API Key")
     else:
         api_key_input = st.text_input("請輸入 Gemini API 金鑰", type="password")
-# 使用輸入的 API 金鑰進行初始化
-if api_key_input:
+
+    # 只有在輸入值變動時才寫回 session_state
+    if api_key_input and api_key_input != st.session_state.api_key:
+        st.session_state.api_key = api_key_input
+
+# ============================================
+# 驗證並初始化 Gemini 模型
+# ============================================
+if st.session_state.api_key:
     try:
-        genai.configure(api_key=api_key_input)
-        st.session_state.api_key = api_key_input  # 若啟用「記住 API 金鑰」，儲存起來
-        model = genai.GenerativeModel("models/gemini-1.5-flash")
+        genai.configure(api_key=st.session_state.api_key)
+        MODEL_NAME = "models/gemini-2.0-flash"
+        model = genai.GenerativeModel(MODEL_NAME)
     except Exception as e:
-        st.error(f"❌ API 金鑰初始化失敗：{e}")
+        st.error(f"❌ 初始化 Gemini 失敗：{e}")
         st.stop()
 else:
-    st.warning("⚠️ 請輸入 API 金鑰")
+    st.info("⚠️ 請在左側輸入 API 金鑰後開始使用。")
     st.stop()
 
-# ====== 聊天紀錄狀態 ======
-if "history" not in st.session_state:
-    st.session_state.history = []
+# ============================================
+# Sidebar ── 主題列表
+# ============================================
+with st.sidebar:
+    st.markdown("---")
+    st.markdown("## 💡 主題列表")
 
-# ====== 標題區塊 ======
-st.title("🤖 Gemini Chatbot")
-st.markdown("請輸入任何問題，並按 Enter 或點擊送出，Gemini 將會回應你。")
+    topic_options = ["new"] + st.session_state.topic_ids
+    topic_labels = ["🆕 新對話"] + [st.session_state.conversations[tid]["title"] for tid in st.session_state.topic_ids]
 
-# ====== 輸入欄位 ======
+    selected_topic_id = st.radio(
+        "選擇主題以查看或開始對話：",
+        options=topic_options,
+        index=0 if st.session_state.current_topic == "new" else topic_options.index(st.session_state.current_topic),
+        format_func=lambda tid: "🆕 新對話" if tid == "new" else st.session_state.conversations[tid]["title"],
+        key="topic_selector",
+    )
+    st.session_state.current_topic = selected_topic_id
+
+# ============================================
+# 主要輸入區
+# ============================================
 with st.form("user_input_form", clear_on_submit=True):
-    user_input = st.text_input("你想問什麼？", placeholder="請輸入問題...", key="chat_input")
+    user_input = st.text_input("你想問什麼？", placeholder="請輸入問題...")
     submitted = st.form_submit_button("🚀 送出")
 
-# ====== 呼叫 Gemini ======
 if submitted and user_input:
     with st.spinner("Gemini 正在思考中..."):
         try:
             response = model.generate_content(user_input)
             answer = response.text.strip()
-
-            # 儲存對話紀錄
-            st.session_state.history.append({
-                "user": user_input,
-                "bot": answer
-            })
-
         except Exception as e:
             st.error(f"❌ 發生錯誤：{e}")
+            st.stop()
 
-# ====== 顯示聊天紀錄 ======
-if st.session_state.history:
-    st.markdown("### 💬 對話紀錄")
-    for item in reversed(st.session_state.history):
-        st.markdown(f"**👤 你：** {item['user']}")
-        st.markdown(f"**🤖 Gemini：** {item['bot']}")
+    if st.session_state.current_topic == "new":
+        # 建立新主題
+        topic_title = user_input if len(user_input) <= 10 else user_input[:10] + "..."
+        topic_id = f"topic_{len(st.session_state.topic_ids) + 1}"
+
+        st.session_state.conversations[topic_id] = {
+            "title": topic_title,
+            "history": [{"user": user_input, "bot": answer}],
+        }
+        st.session_state.topic_ids.append(topic_id)
+        st.session_state.current_topic = topic_id
+    else:
+        # 使用現有主題
+        st.session_state.conversations[st.session_state.current_topic]["history"].append({
+            "user": user_input,
+            "bot": answer
+        })
+
+# ============================================
+# 對話紀錄顯示區
+# ============================================
+if st.session_state.current_topic != "new":
+    conv = st.session_state.conversations[st.session_state.current_topic]
+
+    for msg in reversed(conv["history"]):
+        st.markdown(f"**👤 你：** {msg['user']}")
+        st.markdown(f"**🤖 Gemini：** {msg['bot']}")
         st.markdown("---")
