@@ -36,9 +36,19 @@ with st.sidebar:
         api_key_input = st.session_state.api_key
     else:
         api_key_input = st.text_input("請輸入 Gemini API 金鑰", type="password")
+# 使用輸入的 API 金鑰進行初始化
+if api_key_input:
+    try:
+        genai.configure(api_key=api_key_input)
+        st.session_state.api_key = api_key_input  # 若啟用「記住 API 金鑰」，儲存起來
+        model = genai.GenerativeModel("models/gemini-1.5-flash")
+    except Exception as e:
+        st.error(f"❌ API 金鑰初始化失敗：{e}")
+        st.stop()
+else:
+    st.warning("⚠️ 請輸入 API 金鑰")
+    st.stop()
 
-genai.configure(api_key=API_KEY)
-model = genai.GenerativeModel("models/gemini-2.0-flash")
 
 # ====== 頁面設定 ======
 st.set_page_config(page_title="Gemini Chat App", page_icon="🤖")
