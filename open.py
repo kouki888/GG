@@ -3,13 +3,25 @@ from dotenv import load_dotenv
 import os
 import google.generativeai as genai
 
-# ====== 載入 API Key ======
-load_dotenv()
-API_KEY = os.getenv("GOOGLE_API_KEY")
+# ---------------- 🔐 API 金鑰輸入區 ----------------
+with st.sidebar:
+    st.markdown("## 🔐 API 設定")
+    st.markdown("## 限gemini-1.5-flash")
+    
+    remember_api_checkbox = st.checkbox("記住 API 金鑰", value=st.session_state.remember_api)
 
-if not API_KEY:
-    st.error("❌ API 金鑰未設定，請確認 .env 檔案或環境變數")
-    st.stop()
+    # 檢查是否從勾選變為取消，若是則清空 API 金鑰
+    if not remember_api_checkbox and st.session_state.remember_api:
+        st.session_state.api_key = ""
+
+    # 更新勾選狀態
+    st.session_state.remember_api = remember_api_checkbox
+
+    # 根據勾選狀態與 API 金鑰顯示或輸入
+    if st.session_state.remember_api and st.session_state.api_key:
+        api_key_input = st.session_state.api_key
+    else:
+        api_key_input = st.text_input("請輸入 Gemini API 金鑰", type="password")
 
 genai.configure(api_key=API_KEY)
 model = genai.GenerativeModel("models/gemini-2.0-flash")
