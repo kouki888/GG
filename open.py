@@ -7,6 +7,9 @@ import google.generativeai as genai
 st.set_page_config(page_title="Gemini 聊天室", layout="wide")
 st.title("🤖 Gemini AI 聊天室")
 
+# ====== 頁面設定 ======
+st.set_page_config(page_title="Gemini Chat App", page_icon="🤖")
+
 # 初始化狀態
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
@@ -19,8 +22,8 @@ if "chat" not in st.session_state:
 
 # ---------------- 🔐 API 金鑰輸入區 ----------------
 with st.sidebar:
+    app_mode = st.sidebar.selectbox("選擇功能模式", ["🤖 Gemini 聊天機器人"])
     st.markdown("## 🔐 API 設定")
-    st.markdown("## 限gemini-1.5-flash")
     
     remember_api_checkbox = st.checkbox("記住 API 金鑰", value=st.session_state.remember_api)
 
@@ -48,13 +51,6 @@ if api_key_input:
 else:
     st.warning("⚠️ 請輸入 API 金鑰")
     st.stop()
-
-
-# ====== 頁面設定 ======
-st.set_page_config(page_title="Gemini Chat App", page_icon="🤖")
-
-# ===== 側邊欄選單 =====
-app_mode = st.sidebar.selectbox("選擇功能模式", ["🤖 Gemini 聊天機器人"])
 
 # ====== 聊天紀錄狀態 ======
 if "history" not in st.session_state:
