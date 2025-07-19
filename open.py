@@ -17,7 +17,7 @@ _default_state = {
     "remember_api": False,
     "conversations": {},  # {topic_id: {"title": str, "history": list[dict]}}
     "topic_ids": [],      # 保持主題的順序
-    "current_topic": None,
+    "current_topic": "new",  # 預設為新對話
 }
 for k, v in _default_state.items():
     if k not in st.session_state:
@@ -67,22 +67,17 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("## 💡 主題列表")
 
-    if st.session_state.topic_ids:
-        # 將 topic_id 作為選項，但用 title 顯示
-        selected_topic_id = st.radio(
-            "選擇主題以查看對話：",
-            options=st.session_state.topic_ids,
-            index=(
-                st.session_state.topic_ids.index(st.session_state.current_topic)
-                if st.session_state.current_topic in st.session_state.topic_ids
-                else len(st.session_state.topic_ids) - 1
-            ),
-            format_func=lambda tid: st.session_state.conversations[tid]["title"],
-            key="topic_selector",
-        )
-        st.session_state.current_topic = selected_topic_id
-    else:
-        st.write("尚無主題，快來提問吧！")
+    topic_options = ["new"] + st.session_state.topic_ids
+    topic_labels = ["🆕 新對話"] + [st.session_state.conversations[tid]["title"] for tid in st.session_state.topic_ids]
+
+    selected_topic_id = st.radio(
+        "選擇主題以查看或開始對話：",
+        options=topic_options,
+        index=0 if st.session_state.current_topic == "new" else topic_options.index(st.session_state.current_topic),
+        format_func=lambda tid: "🆕 新對話" if tid == "new" else st.session_state.conversations[tid]["title"],
+        key="topic_selector",
+    )
+    st.session_state.current_topic = selected_topic_id
 
 # ============================================
 # 主要輸入區
@@ -100,24 +95,31 @@ if submitted and user_input:
             st.error(f"❌ 發生錯誤：{e}")
             st.stop()
 
-    # 產生新主題
-    topic_title = user_input if len(user_input) <= 10 else user_input[:10] + "..."
-    topic_id = f"topic_{len(st.session_state.topic_ids) + 1}"
+    if st.session_state.current_topic == "new":
+        # 建立新主題
+        topic_title = user_input if len(user_input) <= 10 else user_input[:10] + "..."
+        topic_id = f"topic_{len(st.session_state.topic_ids) + 1}"
 
-    st.session_state.conversations[topic_id] = {
-        "title": topic_title,
-        "history": [{"user": user_input, "bot": answer}],
-    }
-    st.session_state.topic_ids.append(topic_id)
-    st.session_state.current_topic = topic_id
+        st.session_state.conversations[topic_id] = {
+            "title": topic_title,
+            "history": [{"user": user_input, "bot": answer}],
+        }
+        st.session_state.topic_ids.append(topic_id)
+        st.session_state.current_topic = topic_id
+    else:
+        # 使用現有主題
+        st.session_state.conversations[st.session_state.current_topic]["history"].append({
+            "user": user_input,
+            "bot": answer
+        })
 
 # ============================================
 # 對話紀錄顯示區
 # ============================================
-if st.session_state.current_topic:
+if st.session_state.current_topic != "new":
     conv = st.session_state.conversations[st.session_state.current_topic]
 
-    # st.markdown(f"### 💬 {conv['title']}")
+    st.markdown(f"### 💬 {conv['title']}")
     for msg in reversed(conv["history"]):
         st.markdown(f"**👤 你：** {msg['user']}")
         st.markdown(f"**🤖 Gemini：** {msg['bot']}")
