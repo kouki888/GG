@@ -117,7 +117,7 @@ if submitted and user_input:
 if st.session_state.current_topic:
     conv = st.session_state.conversations[st.session_state.current_topic]
 
-    st.markdown(f"### 💬 {conv['title']}")
+    # st.markdown(f"### 💬 {conv['title']}")
     for msg in reversed(conv["history"]):
         st.markdown(f"**👤 你：** {msg['user']}")
         st.markdown(f"**🤖 Gemini：** {msg['bot']}")
