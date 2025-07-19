@@ -3,22 +3,54 @@ from dotenv import load_dotenv
 import os
 import google.generativeai as genai
 
-# ====== 載入 API Key ======
-load_dotenv()
-API_KEY = os.getenv("GOOGLE_API_KEY")
-
-if not API_KEY:
-    st.error("❌ API 金鑰未設定，請確認 .env 檔案或環境變數")
-    st.stop()
-
-genai.configure(api_key=API_KEY)
-model = genai.GenerativeModel("models/gemini-2.0-flash")
+# 頁面設定
+st.set_page_config(page_title="Gemini 聊天室", layout="wide")
+st.title("🤖 Gemini AI 聊天室")
 
 # ====== 頁面設定 ======
 st.set_page_config(page_title="Gemini Chat App", page_icon="🤖")
 
-# ===== 側邊欄選單 =====
-app_mode = st.sidebar.selectbox("選擇功能模式", ["🤖 Gemini 聊天機器人"])
+# 初始化狀態
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+if "api_key" not in st.session_state:
+    st.session_state.api_key = ""
+if "remember_api" not in st.session_state:
+    st.session_state.remember_api = False
+if "chat" not in st.session_state:
+    st.session_state.chat = None  # Gemini 的 chat 物件
+
+# ---------------- 🔐 API 金鑰輸入區 ----------------
+with st.sidebar:
+    app_mode = st.sidebar.selectbox("選擇功能模式", ["🤖 Gemini 聊天機器人"])
+    st.markdown("## 🔐 API 設定")
+    
+    remember_api_checkbox = st.checkbox("記住 API 金鑰", value=st.session_state.remember_api)
+
+    # 檢查是否從勾選變為取消，若是則清空 API 金鑰
+    if not remember_api_checkbox and st.session_state.remember_api:
+        st.session_state.api_key = ""
+
+    # 更新勾選狀態
+    st.session_state.remember_api = remember_api_checkbox
+
+    # 根據勾選狀態與 API 金鑰顯示或輸入
+    if st.session_state.remember_api and st.session_state.api_key:
+        api_key_input = st.session_state.api_key
+    else:
+        api_key_input = st.text_input("請輸入 Gemini API 金鑰", type="password")
+# 使用輸入的 API 金鑰進行初始化
+if api_key_input:
+    try:
+        genai.configure(api_key=api_key_input)
+        st.session_state.api_key = api_key_input  # 若啟用「記住 API 金鑰」，儲存起來
+        model = genai.GenerativeModel("models/gemini-1.5-flash")
+    except Exception as e:
+        st.error(f"❌ API 金鑰初始化失敗：{e}")
+        st.stop()
+else:
+    st.warning("⚠️ 請輸入 API 金鑰")
+    st.stop()
 
 # ====== 聊天紀錄狀態 ======
 if "history" not in st.session_state:
