@@ -27,7 +27,7 @@ for k, v in _default_state.items():
 # Sidebar ── API Key 區塊
 # ============================================
 with st.sidebar:
-    st.markdown("## 🔐 API 設定 (限 gemini‑1.5‑flash)")
+    st.markdown("## 🔐 API 設定 ")
 
     # 記住 API Key 的勾選框
     st.session_state.remember_api = st.checkbox(
