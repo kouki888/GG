@@ -27,7 +27,7 @@ for k, v in _default_state.items():
 # Sidebar ── API Key 區塊
 # ============================================
 with st.sidebar:
-    st.markdown("## 🔐 API 設定 ")
+    st.markdown("## 🔐 API 設定 (限 gemini‑1.5‑flash)")
 
     # 記住 API Key 的勾選框
     st.session_state.remember_api = st.checkbox(
@@ -61,27 +61,22 @@ else:
     st.stop()
 
 # ============================================
-# Sidebar ── 主題列表
+# 主題按鈕區塊
 # ============================================
-with st.sidebar:
-    st.markdown("---")
-    st.markdown("## 💡 主題列表")
+st.markdown("## 💡 主題列表")
+col1, col2, col3 = st.columns(3)
 
-    topic_options = ["new"] + st.session_state.topic_ids
-    topic_labels = ["🆕 新對話"] + [st.session_state.conversations[tid]["title"] for tid in st.session_state.topic_ids]
-
-    selected_topic_id = st.radio(
-        "選擇主題以查看或開始對話：",
-        options=topic_options,
-        index=0 if st.session_state.current_topic == "new" else topic_options.index(st.session_state.current_topic),
-        format_func=lambda tid: "🆕 新對話" if tid == "new" else st.session_state.conversations[tid]["title"],
-        key="topic_selector",
-    )
-    st.session_state.current_topic = selected_topic_id
+if st.session_state.topic_ids:
+    for i, tid in enumerate(reversed(st.session_state.topic_ids)):
+        title = st.session_state.conversations[tid]["title"]
+        if col1.button(title, key=f"topic_btn_{tid}"):
+            st.session_state.current_topic = tid
+        col1, col2, col3 = col2, col3, col1  # 交替換欄
 
 # ============================================
 # 主要輸入區
 # ============================================
+st.markdown("---")
 with st.form("user_input_form", clear_on_submit=True):
     user_input = st.text_input("你想問什麼？", placeholder="請輸入問題...")
     submitted = st.form_submit_button("🚀 送出")
@@ -119,6 +114,7 @@ if submitted and user_input:
 if st.session_state.current_topic != "new":
     conv = st.session_state.conversations[st.session_state.current_topic]
 
+    st.markdown(f"### 💬 {conv['title']}")
     for msg in reversed(conv["history"]):
         st.markdown(f"**👤 你：** {msg['user']}")
         st.markdown(f"**🤖 Gemini：** {msg['bot']}")
