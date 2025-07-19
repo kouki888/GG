@@ -3,6 +3,20 @@ from dotenv import load_dotenv
 import os
 import google.generativeai as genai
 
+# 頁面設定
+st.set_page_config(page_title="Gemini 聊天室", layout="wide")
+st.title("🤖 Gemini AI 聊天室")
+
+# 初始化狀態
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+if "api_key" not in st.session_state:
+    st.session_state.api_key = ""
+if "remember_api" not in st.session_state:
+    st.session_state.remember_api = False
+if "chat" not in st.session_state:
+    st.session_state.chat = None  # Gemini 的 chat 物件
+
 # ---------------- 🔐 API 金鑰輸入區 ----------------
 with st.sidebar:
     st.markdown("## 🔐 API 設定")
