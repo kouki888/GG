@@ -88,7 +88,7 @@ if uploaded_file is not None:
         st.session_state.uploaded_df = None
         st.error(f"❌ 上傳的 CSV 檔案讀取失敗：{e}")
 
-elif os.path.exists(default_csv_path):
+    elif os.path.exists(default_csv_path):
     try:
         df = pd.read_csv(default_csv_path)
         st.session_state.uploaded_df = df
