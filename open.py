@@ -15,9 +15,9 @@ st.title("🤖 Gemini AI 聊天室")
 _default_state = {
     "api_key": "",
     "remember_api": False,
-    "conversations": {},        # {topic_id: {"title": str, "history": list[dict]}}
-    "topic_ids": [],            # 保持主題順序
-    "current_topic": "new",     # 預設為新對話
+    "conversations": {},  # {topic_id: {"title": str, "history": list[dict]}}
+    "topic_ids": [],      # 保持主題的順序
+    "current_topic": "new",  # 預設為新對話
 }
 for k, v in _default_state.items():
     if k not in st.session_state:
@@ -29,16 +29,19 @@ for k, v in _default_state.items():
 with st.sidebar:
     st.markdown("## 🔐 API 設定 ")
 
+    # 記住 API Key 的勾選框
     st.session_state.remember_api = st.checkbox(
         "記住 API 金鑰", value=st.session_state.remember_api
     )
 
+    # API Key 輸入或顯示
     if st.session_state.remember_api and st.session_state.api_key:
         api_key_input = st.session_state.api_key
         st.success("✅ 已使用儲存的 API Key")
     else:
         api_key_input = st.text_input("請輸入 Gemini API 金鑰", type="password")
 
+    # 只有在輸入值變動時才寫回 session_state
     if api_key_input and api_key_input != st.session_state.api_key:
         st.session_state.api_key = api_key_input
 
@@ -58,25 +61,23 @@ else:
     st.stop()
 
 # ============================================
-# Sidebar ── 聊天主題清單（使用 st.radio）
+# Sidebar ── 主題列表
 # ============================================
 with st.sidebar:
     st.markdown("---")
-    st.header("🗂️ 聊天紀錄")
+    st.markdown("## 💡 主題列表")
 
-    topic_titles = ["🆕 新對話"] + [
-        st.session_state.conversations[tid]["title"] for tid in st.session_state.topic_ids
-    ]
-    topic_map = ["new"] + st.session_state.topic_ids
+    topic_options = ["new"] + st.session_state.topic_ids
+    topic_labels = ["🆕 新對話"] + [st.session_state.conversations[tid]["title"] for tid in st.session_state.topic_ids]
 
-    current_index = topic_map.index(st.session_state.current_topic) if st.session_state.current_topic in topic_map else 0
-    selected_title = st.radio("請選擇主題：", topic_titles, index=current_index)
-    st.session_state.current_topic = topic_map[topic_titles.index(selected_title)]
-
-    if st.button("🧹 清除所有聊天紀錄"):
-        st.session_state.conversations = {}
-        st.session_state.topic_ids = []
-        st.session_state.current_topic = "new"
+    selected_topic_id = st.radio(
+        "選擇主題以查看或開始對話：",
+        options=topic_options,
+        index=0 if st.session_state.current_topic == "new" else topic_options.index(st.session_state.current_topic),
+        format_func=lambda tid: "🆕 新對話" if tid == "new" else st.session_state.conversations[tid]["title"],
+        key="topic_selector",
+    )
+    st.session_state.current_topic = selected_topic_id
 
 # ============================================
 # 主要輸入區
@@ -106,7 +107,7 @@ if submitted and user_input:
         st.session_state.topic_ids.append(topic_id)
         st.session_state.current_topic = topic_id
     else:
-        # 加入現有主題的對話歷史
+        # 使用現有主題
         st.session_state.conversations[st.session_state.current_topic]["history"].append({
             "user": user_input,
             "bot": answer
