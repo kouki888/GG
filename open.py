@@ -110,10 +110,12 @@ if submitted and user_input:
 
             # 產生主題名稱（如果是新主題）
             if is_new:
-                title_prompt = f"請為以下這句話產生一個簡短主題：「{user_input}」"
+                title_prompt = f"請為以下這句話產生一個簡短主題（10 個中文字以內）：「{user_input}」，請直接輸出主題，不要加引號或多餘說明。"
                 title_response = model.generate_content(title_prompt)
                 topic_title = title_response.text.strip().replace("主題：", "").replace("\n", "")
+                topic_title = topic_title[:10]  # 最多保留 10 字
                 st.session_state.conversations[topic_id]["title"] = topic_title
+
 
         except Exception as e:
             answer = f"⚠️ 發生錯誤：{e}"
