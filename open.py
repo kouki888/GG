@@ -58,21 +58,26 @@ else:
     st.stop()
 
 # ============================================
-# Sidebar ── 聊天主題清單（使用 st.radio）
+# Sidebar ── 聊天主題清單（使用按鈕）
 # ============================================
 with st.sidebar:
     st.markdown("---")
     st.header("🗂️ 聊天紀錄")
 
-    topic_titles = ["🆕 新對話"] + [
-        st.session_state.conversations[tid]["title"] for tid in st.session_state.topic_ids
-    ]
-    topic_map = ["new"] + st.session_state.topic_ids
+    # 新對話按鈕
+    new_btn_label = "🆕 新對話" if st.session_state.current_topic != "new" else "✔️ 新對話"
+    if st.button(new_btn_label, key="new_topic_btn"):
+        st.session_state.current_topic = "new"
 
-    current_index = topic_map.index(st.session_state.current_topic) if st.session_state.current_topic in topic_map else 0
-    selected_title = st.radio("請選擇主題：", topic_titles, index=current_index)
-    st.session_state.current_topic = topic_map[topic_titles.index(selected_title)]
+    # 主題按鈕清單
+    for tid in st.session_state.topic_ids:
+        title = st.session_state.conversations[tid]["title"]
+        is_current = tid == st.session_state.current_topic
+        label = f"✔️ {title}" if is_current else title
+        if st.button(label, key=f"topic_{tid}"):
+            st.session_state.current_topic = tid
 
+    st.markdown("---")
     if st.button("🧹 清除所有聊天紀錄"):
         st.session_state.conversations = {}
         st.session_state.topic_ids = []
