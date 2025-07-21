@@ -69,18 +69,36 @@ MODEL_NAME = "models/gemini-2.0-flash"
 model = genai.GenerativeModel(MODEL_NAME)
 
 # ============================================
-# CSV 上傳與顯示
+# 📂 CSV 上傳與預設檔案處理
 # ============================================
 uploaded_file = st.file_uploader("📁 上傳 CSV 檔案（Gemini 可讀取）", type="csv")
-if uploaded_file:
+
+# 預設路徑
+default_csv_path = "/mnt/data/ShoeSize.csv"
+
+# 優先使用上傳檔案，否則使用預設檔案
+df = None
+if uploaded_file is not None:
     try:
         df = pd.read_csv(uploaded_file)
         st.session_state.uploaded_df = df
-        st.success("✅ 檔案上傳成功，前幾列如下：")
+        st.success("✅ 已使用你上傳的檔案。")
         st.dataframe(df.head())
     except Exception as e:
         st.session_state.uploaded_df = None
-        st.error(f"❌ CSV 讀取錯誤：{e}")
+        st.error(f"❌ 上傳的 CSV 檔案讀取失敗：{e}")
+
+elif os.path.exists(default_csv_path):
+    try:
+        df = pd.read_csv(default_csv_path)
+        st.session_state.uploaded_df = df
+        st.info("📂 使用預設的 CSV 檔案（ShoeSize.csv）")
+        st.dataframe(df.head())
+    except Exception as e:
+        st.session_state.uploaded_df = None
+        st.error(f"❌ 預設檔案讀取失敗：{e}")
+else:
+    st.warning("⚠️ 尚未上傳檔案，且找不到預設檔案。")
 
 # ============================================
 # Sidebar 聊天紀錄管理
