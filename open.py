@@ -50,12 +50,19 @@ if st.session_state.api_key:
         genai.configure(api_key=st.session_state.api_key)
         MODEL_NAME = "models/gemini-2.0-flash"
         model = genai.GenerativeModel(MODEL_NAME)
+
+        # 使用簡單訊息來測試 API Key 是否有效
+        test_response = model.generate_content("Hello")
+        if test_response.text.strip() == "":
+            raise ValueError("API 回應為空，可能是無效金鑰")
+
     except Exception as e:
-        st.error(f"❌ 初始化 Gemini 失敗：{e}")
+        st.error(f"❌ API 金鑰驗證失敗或無效：{e}")
         st.stop()
 else:
     st.info("⚠️ 請在左側輸入 API 金鑰後開始使用。")
     st.stop()
+
 
 # ============================================
 # 📂 CSV 檔案上傳與顯示
