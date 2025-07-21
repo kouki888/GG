@@ -1,6 +1,7 @@
 import streamlit as st
 from dotenv import load_dotenv
 import os
+import pandas as pd
 import google.generativeai as genai
 
 # ============================================
@@ -15,9 +16,10 @@ st.title("🤖 Gemini AI 聊天室")
 _default_state = {
     "api_key": "",
     "remember_api": False,
-    "conversations": {},        # {topic_id: {"title": str, "history": list[dict]}}
+    "conversations": {},        # {topic_id: {"title": str, "history": list[dict]} }
     "topic_ids": [],            # 主題順序
     "current_topic": "new",     # 預設為新對話
+    "uploaded_df": None,        # 上傳的 CSV DataFrame
 }
 for k, v in _default_state.items():
     if k not in st.session_state:
@@ -48,12 +50,34 @@ if st.session_state.api_key:
         genai.configure(api_key=st.session_state.api_key)
         MODEL_NAME = "models/gemini-2.0-flash"
         model = genai.GenerativeModel(MODEL_NAME)
+
+        # 使用簡單訊息來測試 API Key 是否有效
+        test_response = model.generate_content("Hello")
+        if test_response.text.strip() == "":
+            raise ValueError("API 回應為空，可能是無效金鑰")
+
     except Exception as e:
-        st.error(f"❌ 初始化 Gemini 失敗：{e}")
+        st.error(f"❌ API 金鑰驗證失敗或無效：{e}")
         st.stop()
 else:
     st.info("⚠️ 請在左側輸入 API 金鑰後開始使用。")
     st.stop()
+
+
+# ============================================
+# 📂 CSV 檔案上傳與顯示
+# ============================================
+uploaded_file = st.file_uploader("📁 上傳 CSV 檔案（Gemini 可讀取）", type="csv")
+
+if uploaded_file is not None:
+    try:
+        df = pd.read_csv(uploaded_file)
+        st.session_state.uploaded_df = df
+        st.success("✅ 檔案上傳成功，前幾列資料如下：")
+        st.dataframe(df.head())
+    except Exception as e:
+        st.error(f"❌ 無法讀取 CSV 檔案：{e}")
+        st.session_state.uploaded_df = None
 
 # ============================================
 # Sidebar ── 聊天主題清單（按鈕版）
@@ -88,7 +112,6 @@ if submitted and user_input:
     is_new = st.session_state.current_topic == "new"
 
     if is_new:
-        # ==== 先加暫時主題 ====
         topic_id = f"topic_{len(st.session_state.topic_ids) + 1}"
         st.session_state.conversations[topic_id] = {
             "title": "（產生主題中...）",
@@ -105,17 +128,20 @@ if submitted and user_input:
     # === Gemini 回覆內容與主題生成 ===
     with st.spinner("Gemini 正在思考中..."):
         try:
-            response = model.generate_content(user_input)
+            prompt = user_input
+            if st.session_state.uploaded_df is not None:
+                csv_preview = st.session_state.uploaded_df.head(10).to_csv(index=False)
+                prompt = f"以下是使用者提供的 CSV 資料（前 10 筆）：\n{csv_preview}\n\n根據上述資料，{user_input}"
+
+            response = model.generate_content(prompt)
             answer = response.text.strip()
 
-            # 產生主題名稱（如果是新主題）
             if is_new:
                 title_prompt = f"請為以下這句話產生一個簡短主題（10 個中文字以內）：「{user_input}」，請直接輸出主題，不要加引號或多餘說明。"
                 title_response = model.generate_content(title_prompt)
                 topic_title = title_response.text.strip().replace("主題：", "").replace("\n", "")
-                topic_title = topic_title[:10]  # 最多保留 10 字
+                topic_title = topic_title[:10]
                 st.session_state.conversations[topic_id]["title"] = topic_title
-
 
         except Exception as e:
             answer = f"⚠️ 發生錯誤：{e}"
