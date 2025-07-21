@@ -86,31 +86,36 @@ with st.form("user_input_form", clear_on_submit=True):
     submitted = st.form_submit_button("🚀 送出")
 
 if submitted and user_input:
-    with st.spinner("Gemini 正在思考中..."):
-        try:
-            response = model.generate_content(user_input)
-            answer = response.text.strip()
-        except Exception as e:
-            st.error(f"❌ 發生錯誤：{e}")
-            st.stop()
+    is_new = st.session_state.current_topic == "new"
 
-    if st.session_state.current_topic == "new":
-        # 建立新主題
+    # === 新主題先建立（不等 Gemini 回覆）===
+    if is_new:
         topic_title = user_input if len(user_input) <= 10 else user_input[:10] + "..."
         topic_id = f"topic_{len(st.session_state.topic_ids) + 1}"
 
         st.session_state.conversations[topic_id] = {
             "title": topic_title,
-            "history": [{"user": user_input, "bot": answer}],
+            "history": [{"user": user_input, "bot": "⏳ 回覆生成中..."}],
         }
         st.session_state.topic_ids.append(topic_id)
         st.session_state.current_topic = topic_id
     else:
-        # 加入現有主題的對話歷史
+        # 加入暫時 bot 空回覆
         st.session_state.conversations[st.session_state.current_topic]["history"].append({
             "user": user_input,
-            "bot": answer
+            "bot": "⏳ 回覆生成中..."
         })
+
+    # === 顯示回覆等待 ===
+    with st.spinner("Gemini 正在思考中..."):
+        try:
+            response = model.generate_content(user_input)
+            answer = response.text.strip()
+        except Exception as e:
+            answer = f"⚠️ 發生錯誤：{e}"
+
+    # === 更新剛剛最後一筆回覆內容 ===
+    st.session_state.conversations[st.session_state.current_topic]["history"][-1]["bot"] = answer
 
 # ============================================
 # 對話紀錄顯示區
