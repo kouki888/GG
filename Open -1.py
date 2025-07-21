@@ -15,9 +15,9 @@ st.title("🤖 Gemini AI 聊天室")
 _default_state = {
     "api_key": "",
     "remember_api": False,
-    "conversations": {},  # {topic_id: {"title": str, "history": list[dict]}}
-    "topic_ids": [],      # 保持主題的順序
-    "current_topic": "new",  # 預設為新對話
+    "conversations": {},        # {topic_id: {"title": str, "history": list[dict]}}
+    "topic_ids": [],            # 主題順序
+    "current_topic": "new",     # 預設為新對話
 }
 for k, v in _default_state.items():
     if k not in st.session_state:
@@ -29,19 +29,14 @@ for k, v in _default_state.items():
 with st.sidebar:
     st.markdown("## 🔐 API 設定 ")
 
-    # 記住 API Key 的勾選框
-    st.session_state.remember_api = st.checkbox(
-        "記住 API 金鑰", value=st.session_state.remember_api
-    )
+    st.session_state.remember_api = st.checkbox("記住 API 金鑰", value=st.session_state.remember_api)
 
-    # API Key 輸入或顯示
     if st.session_state.remember_api and st.session_state.api_key:
         api_key_input = st.session_state.api_key
         st.success("✅ 已使用儲存的 API Key")
     else:
         api_key_input = st.text_input("請輸入 Gemini API 金鑰", type="password")
 
-    # 只有在輸入值變動時才寫回 session_state
     if api_key_input and api_key_input != st.session_state.api_key:
         st.session_state.api_key = api_key_input
 
@@ -61,57 +56,74 @@ else:
     st.stop()
 
 # ============================================
-# Sidebar ── 主題列表
+# Sidebar ── 聊天主題清單（按鈕版）
 # ============================================
 with st.sidebar:
     st.markdown("---")
-    st.markdown("## 💡 主題列表")
+    st.header("🗂️ 聊天紀錄")
 
-    topic_options = ["new"] + st.session_state.topic_ids
-    topic_labels = ["🆕 新對話"] + [st.session_state.conversations[tid]["title"] for tid in st.session_state.topic_ids]
+    if st.button("🆕 新對話", key="new_btn"):
+        st.session_state.current_topic = "new"
 
-    selected_topic_id = st.radio(
-        "選擇主題以查看或開始對話：",
-        options=topic_options,
-        index=0 if st.session_state.current_topic == "new" else topic_options.index(st.session_state.current_topic),
-        format_func=lambda tid: "🆕 新對話" if tid == "new" else st.session_state.conversations[tid]["title"],
-        key="topic_selector",
-    )
-    st.session_state.current_topic = selected_topic_id
+    for tid in st.session_state.topic_ids:
+        title = st.session_state.conversations[tid]["title"]
+        label = f"✔️ {title}" if tid == st.session_state.current_topic else title
+        if st.button(label, key=f"topic_btn_{tid}"):
+            st.session_state.current_topic = tid
+
+    st.markdown("---")
+    if st.button("🧹 清除所有聊天紀錄"):
+        st.session_state.conversations = {}
+        st.session_state.topic_ids = []
+        st.session_state.current_topic = "new"
 
 # ============================================
-# 主要輸入區
+# 使用者輸入區塊
 # ============================================
 with st.form("user_input_form", clear_on_submit=True):
     user_input = st.text_input("你想問什麼？", placeholder="請輸入問題...")
     submitted = st.form_submit_button("🚀 送出")
 
 if submitted and user_input:
-    with st.spinner("Gemini 正在思考中..."):
-        try:
-            response = model.generate_content(user_input)
-            answer = response.text.strip()
-        except Exception as e:
-            st.error(f"❌ 發生錯誤：{e}")
-            st.stop()
+    is_new = st.session_state.current_topic == "new"
 
-    if st.session_state.current_topic == "new":
-        # 建立新主題
-        topic_title = user_input if len(user_input) <= 10 else user_input[:10] + "..."
+    if is_new:
+        # ==== 先加暫時主題 ====
         topic_id = f"topic_{len(st.session_state.topic_ids) + 1}"
-
         st.session_state.conversations[topic_id] = {
-            "title": topic_title,
-            "history": [{"user": user_input, "bot": answer}],
+            "title": "（產生主題中...）",
+            "history": [{"user": user_input, "bot": "⏳ 回覆生成中..."}],
         }
         st.session_state.topic_ids.append(topic_id)
         st.session_state.current_topic = topic_id
     else:
-        # 使用現有主題
         st.session_state.conversations[st.session_state.current_topic]["history"].append({
             "user": user_input,
-            "bot": answer
+            "bot": "⏳ 回覆生成中..."
         })
+
+    # === Gemini 回覆內容與主題生成 ===
+    with st.spinner("Gemini 正在思考中..."):
+        try:
+            response = model.generate_content(user_input)
+            answer = response.text.strip()
+
+            # 產生主題名稱（如果是新主題）
+            if is_new:
+                title_prompt = f"請為以下這句話產生一個簡短主題（10 個中文字以內）：「{user_input}」，請直接輸出主題，不要加引號或多餘說明。"
+                title_response = model.generate_content(title_prompt)
+                topic_title = title_response.text.strip().replace("主題：", "").replace("\n", "")
+                topic_title = topic_title[:10]  # 最多保留 10 字
+                st.session_state.conversations[topic_id]["title"] = topic_title
+
+
+        except Exception as e:
+            answer = f"⚠️ 發生錯誤：{e}"
+            if is_new:
+                st.session_state.conversations[topic_id]["title"] = "錯誤主題"
+
+    # === 更新對話內容 ===
+    st.session_state.conversations[st.session_state.current_topic]["history"][-1]["bot"] = answer
 
 # ============================================
 # 對話紀錄顯示區
