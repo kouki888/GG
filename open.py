@@ -60,24 +60,18 @@ else:
     st.info("⚠️ 請在左側輸入 API 金鑰後開始使用。")
     st.stop()
 
-# ============================================
-# Sidebar ── 主題列表
-# ============================================
-with st.sidebar:
-    st.markdown("---")
-    st.markdown("## 💡 主題列表")
+# ====== 側邊欄：聊天主題清單 ======
+    with st.sidebar:
+        st.markdown("---")
+        st.header("🗂️ 聊天紀錄")
 
-    topic_options = ["new"] + st.session_state.topic_ids
-    topic_labels = ["🆕 新對話"] + [st.session_state.conversations[tid]["title"] for tid in st.session_state.topic_ids]
+        for idx, chat in enumerate(st.session_state.chat_history):
+            if st.button(chat["title"], key=f"chat_{idx}"):
+                st.session_state.selected_chat = idx
 
-    selected_topic_id = st.radio(
-        "選擇主題以查看或開始對話：",
-        options=topic_options,
-        index=0 if st.session_state.current_topic == "new" else topic_options.index(st.session_state.current_topic),
-        format_func=lambda tid: "🆕 新對話" if tid == "new" else st.session_state.conversations[tid]["title"],
-        key="topic_selector",
-    )
-    st.session_state.current_topic = selected_topic_id
+        if st.button("🧹 清除所有聊天紀錄"):
+            st.session_state.chat_history = []
+            st.session_state.selected_chat = None
 
 # ============================================
 # 主要輸入區
