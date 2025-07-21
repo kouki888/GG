@@ -72,7 +72,7 @@ model = genai.GenerativeModel(MODEL_NAME)
 # 📂 CSV 上傳與預設檔案處理
 # ============================================
 uploaded_file = st.file_uploader("📁 上傳 CSV 檔案（Gemini 可讀取）", type="csv")
-default_csv_path = "/mnt/data/ShoeSize.csv"
+default_csv_path = "./ShoeSize.csv"
 
 df = None
 if uploaded_file is not None:
