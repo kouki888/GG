@@ -125,28 +125,23 @@ if submitted and user_input:
             "bot": "⏳ 回覆生成中..."
         })
 
-    # === Gemini 回覆內容與主題生成（使用主題作為提示）===
+    # === Gemini 回覆內容與主題生成 ===
     with st.spinner("Gemini 正在思考中..."):
         try:
-            # 如果是新對話，先產生主題
+            prompt = user_input
+            if st.session_state.uploaded_df is not None:
+                csv_preview = st.session_state.uploaded_df.head(10).to_csv(index=False)
+                prompt = f"以下是使用者提供的 CSV 資料（前 10 筆）：\n{csv_preview}\n\n根據上述資料，{user_input}"
+
+            response = model.generate_content(prompt)
+            answer = response.text.strip()
+
             if is_new:
                 title_prompt = f"請為以下這句話產生一個簡短主題（10 個中文字以內）：「{user_input}」，請直接輸出主題，不要加引號或多餘說明。"
                 title_response = model.generate_content(title_prompt)
                 topic_title = title_response.text.strip().replace("主題：", "").replace("\n", "")
                 topic_title = topic_title[:10]
                 st.session_state.conversations[topic_id]["title"] = topic_title
-            else:
-                topic_title = st.session_state.conversations[st.session_state.current_topic]["title"]
-    
-        # 組合提示詞
-            prompt = f"主題是「{topic_title}」。"
-            if st.session_state.uploaded_df is not None:
-                csv_preview = st.session_state.uploaded_df.head(10).to_csv(index=False)
-                prompt += f"\n以下是使用者提供的 CSV 資料（前 10 筆）：\n{csv_preview}"
-            prompt += f"\n\n根據這些資料與主題，請回答：「{user_input}」"
-
-            response = model.generate_content(prompt)
-            answer = response.text.strip()
 
         except Exception as e:
             answer = f"⚠️ 發生錯誤：{e}"
@@ -154,7 +149,7 @@ if submitted and user_input:
                 st.session_state.conversations[topic_id]["title"] = "錯誤主題"
 
     # === 更新對話內容 ===
-        st.session_state.conversations[st.session_state.current_topic]["history"][-1]["bot"] = answer
+    st.session_state.conversations[st.session_state.current_topic]["history"][-1]["bot"] = answer
 
 # ============================================
 # 對話紀錄顯示區
