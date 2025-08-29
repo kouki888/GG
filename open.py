@@ -8,7 +8,7 @@ import google.generativeai as genai
 # 頁面基本設定
 # ============================================
 st.set_page_config(page_title="Gemini 聊天室", layout="wide")
-st.title("🤖 Gemini AI 聊天室")
+st.title("🤖 Gemini AI 聊天室嘿嘿")
 
 # ============================================
 # Session State 初始化
